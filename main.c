@@ -1,32 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include "functions.h"
 
 int n = 0;          // n - iteration counter
-
-double f1(double x) {
-    return exp(log(2.0) * x) + 1;
-}
-
-double df1(double x) {
-    return log(2.0) * exp(log(2.0) * x);
-}
-
-double f2(double x) {
-    return pow(x, 5);
-}
-
-double df2(double x) {
-    return 5 * pow(x, 4);
-}
-
-double f3(double x) {
-    return (1 - x) / 3;
-}
-
-double df3(double x) {
-    return -1.0 / 3.0;
-}
 
 double root_chord(double (*f)(double), double (*g)(double), double a, double b, double eps1) {
 	/*
@@ -137,8 +114,9 @@ double f4(double x) {
 }
 
 int main(int argc, char **argv) {
-    printf("%d : %lf\n", n, root_tangent(&f1, &df1, &f2, &df2, 1.0, 2.0, 0.0001)); 
-    printf("%d : %lf\n", n, root_chord(&f1, &f2, 1.0, 2.0, 0.0001));
-	printf("integral = %lf\n", integral(&f4, 0.0, 4.0, 0.01));
-    return 0;
+    //printf("%d : %lf\n", n, root_tangent(&f1, &df1, &f2, &df2, 1.0, 2.0, 0.0001)); 
+    //printf("%d : %lf\n", n, root_chord(&f1, &f2, 1.0, 2.0, 0.0001));
+	//printf("integral = %lf\n", integral(&f4, 0.0, 4.0, 0.01));
+    
+	return 0;
 }
