@@ -9,7 +9,7 @@ def_keys = -D "KEY='$(key)'"
 cflags = -g 
 
 clean:
-	@rm *.o generator
+	@rm *.o generator functions.asm
 
 prog: functions main
 	@gcc -o cintegrator main.o functions.o -m32 -no-pie
@@ -24,7 +24,6 @@ functions: generate
 	@nasm -f elf32  -o functions.o functions.asm || { echo "[-] Compilation of function listing failed!"; exit 1; }
 	@echo "[+] Compilation complete!"
 
-generate: SHELL := /bin/bash
 generate: generator
 	@echo "[*] Generating function listings..."
 	@./generator

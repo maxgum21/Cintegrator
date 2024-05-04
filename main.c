@@ -2,7 +2,6 @@
 #define KEY 'c'
 #endif
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -114,6 +113,16 @@ double integral(double (*f)(double), double a, double b, double eps2) {
     return i_2n;
 }
 
+int comp(const void *op1, const void *op2) {
+	double a = *(double *)op1;
+	double b = *(double *)op2;
+	return (a > b) ? 1 : (a < b) ? -1 : 0; 
+}
+
+int is_equal(double a, double b, double eps) {
+	return fabs(a - b) < 2 * eps;
+}
+
 int main(int argc, char **argv) {
     //printf("%d : %lf\n", n, root_tangent(&f1, &df1, &f2, &df2, 1.0, 2.0, 0.0001)); 
     //printf("%d : %lf\n", n, root_chord(&f1, &f2, 1.0, 2.0, 0.0001));
@@ -121,7 +130,7 @@ int main(int argc, char **argv) {
 
 	double f1f2, f2f3, f1f3;
 
-	double eps1 = 0.001;
+	double eps1 = 0.001, eps2 = 0.001;
     
 	if (KEY == 't') {
 		printf("[*] Using tangent method\n");
@@ -146,5 +155,42 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+	double (*farr[3])(double) = {f1, f2, f3};
+	
+	double roots[3] = {f1f2, f1f3, f2f3};
+
+	qsort(roots, 3, sizeof(double), &comp);
+
+	printf("%lf, %lf, %lf\n", roots[0], roots[1], roots[2]);
+
+	double area = 0;
+
+	if (is_equal(f1(roots[0]), f2(roots[0]), eps1)) {
+		area += ((f1(roots[1]) > f2(roots[1])) ? 1 : -1) * (integral(&f1, roots[0], roots[1], eps2) - integral(&f2, roots[0], roots[1], eps2));
+
+		if (is_equal(f1(roots[2]), f3(roots[2]), eps1)) {
+			area += ((f1(roots[1]) > f3(roots[1])) ? 1 : -1) * (integral(&f1, roots[1], roots[2], eps2) - integral(&f3, roots[1], roots[2], eps2));
+		} else {
+			area += ((f2(roots[1]) > f3(roots[1])) ? 1 : -1) * (integral(&f2, roots[1], roots[2], eps2) - integral(&f3, roots[1], roots[2], eps2));
+		}
+	} else if (is_equal(f1(roots[0]), f3(roots[0]), eps1)) {
+		area += ((f1(roots[1]) > f3(roots[1])) ? 1 : -1) * (integral(&f1, roots[0], roots[1], eps2) - integral(&f3, roots[0], roots[1], eps2));
+
+		if (is_equal(f1(roots[2]), f2(roots[2]), eps1)) {
+			area += ((f1(roots[1]) > f2(roots[1])) ? 1 : -1) * (integral(&f1, roots[1], roots[2], eps2) - integral(&f2, roots[1], roots[2], eps2));
+		} else {
+			area += ((f2(roots[1]) > f3(roots[1])) ? 1 : -1) * (integral(&f2, roots[1], roots[2], eps2) - integral(&f3, roots[1], roots[2], eps2));
+		}
+	} else {
+		area += ((f2(roots[1]) > f3(roots[1])) ? 1 : -1) * (integral(&f2, roots[0], roots[1], eps2) - integral(&f3, roots[0], roots[1], eps2));
+
+		if (is_equal(f1(roots[2]), f3(roots[2]), eps1)) {
+			area += ((f1(roots[1]) > f3(roots[1])) ? 1 : -1) * (integral(&f1, roots[1], roots[2], eps2) - integral(&f3, roots[1], roots[2], eps2));
+		} else {
+			area += ((f1(roots[1]) > f2(roots[1])) ? 1 : -1) * (integral(&f1, roots[1], roots[2], eps2) - integral(&f2, roots[1], roots[2], eps2));
+		}
+	} 
+
+	printf("%lf\n", area);
 	return 0;
 }
