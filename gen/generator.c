@@ -1,4 +1,9 @@
 #define _GNU_SOURCE 
+
+#ifndef KEY
+#define KEY = 'c'
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,7 +58,7 @@ void push_command(const char str[], struct stack *stack) {
                                 node = create_node(0.0, X);
                                 break;
                         default:
-                                printf("[-]Something went wrong while making tree from formula line");
+                                //printf("[-] Something went wrong while making tree from formula line");
                                 return;
                 }
         }
@@ -146,7 +151,7 @@ void tree_to_listing(struct node *node) {
                         push_sheap(str, text_heap);
                         break;
                 default:
-                        printf("[-]Something went wrong while making listing from tree");
+                        //printf("[-] Something went wrong while making listing from tree");
                         break;
         }
 }
@@ -168,7 +173,7 @@ void print_data_section(FILE *file) {
         }       
 }
 
-void create_listing(char *formula, size_t length, int index) {    
+void create_listing(char *formula, const char *func_name, int index) {    
 
         char *end, *str = calloc(20, 1);
         
@@ -177,8 +182,6 @@ void create_listing(char *formula, size_t length, int index) {
         struct sheap data_section = {NULL, 0, 0}, text_section = {NULL, 0, 0};
         
         struct stack *stack = create_stack();
-
-        printf("%lu\n\n", length);
 
         while (
                         *(formula + byte_offset) != '\n' &&
@@ -194,7 +197,7 @@ void create_listing(char *formula, size_t length, int index) {
         struct node *root = pop_stack(stack);
         
         char* temp;
-        asprintf(&temp, "f%d:\n\tpush\tebp\n\tmov\tebp, esp\n", index);
+        asprintf(&temp, "%s%d:\n\tpush\tebp\n\tmov\tebp, esp\n", func_name, index);
         push_sheap(temp, text_heap);
 
         tree_to_listing(root);
@@ -211,8 +214,9 @@ int main(void) {
         char *spec_file = getenv("SPEC_FILE");
 
         if (!spec_file) {
-                printf("SPEC_FILE not assigned\n");
-                return 0;
+                printf("[-] SPEC_FILE not assigned\n");
+				printf("[-] Listing generation failed\n");
+                return 1;
         }
 
         FILE *input  = fopen(spec_file, "r");
@@ -222,29 +226,41 @@ int main(void) {
         
         fscanf(input, "%lf %lf\n", &a, &b);
 
-        printf("%lf %lf\n", a, b);      
         
         text_heap = create_sheap();
         data_heap = create_dheap();
 
-        for (int i = 1; i <= 3; i++) {
+		if (KEY == 't') printf("[*] Generating listing for tangent method...\n");
+		else if (KEY == 'c') printf("[*] Generating listing for chord method...\n");
+		else { printf("[-] KEY undefined!\n"); printf("[-] Listing generation failed\n"); return 1; }
+
+        for (int i = 1; i <= ((KEY == 't') ? 6 : 3); i++) {
                 size_t n = 0;
                 char *formula;
                 int c = getdelim(&formula, &n, '\n', input);
                 formula[c - 1] = 0; 
                 
-                create_listing(formula, n, i);
-                free(formula);
+				if (i > 3) create_listing(formula, "df", i - 3);
+				else create_listing(formula, "f", i);
+                
+				free(formula);
         }
 
         fprintf(output, "section .data\n");
+		fprintf(output, "a:\tdq\t%lf\n", a);
+		fprintf(output, "b:\tdq\t%lf\n", b);
         print_data_section(output);
 
         fprintf(output, "\nsection .text\n");
-        fprintf(output, "global f1\n");
-        fprintf(output, "global f2\n");
-        fprintf(output, "global f3\n");
-        print_text_section(output);
+		fprintf(output, "\nglobal a\nglobal b\n");
+
+		for (int i = 1; i <= 3; i++) fprintf(output, "global f%d\n", i);
+        
+		if (KEY == 't') {
+        	for (int i = 1; i <= 3; i++) fprintf(output, "global df%d\n", i);
+		}
+
+		print_text_section(output);
 
         fclose(input);
         

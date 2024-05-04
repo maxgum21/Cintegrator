@@ -10,7 +10,6 @@
 
 int n = 0;          // n - iteration counter
 
-extern double a, b;
 
 double root_chord(double (*f)(double), double (*g)(double), double a, double b, double eps1) {
 	/*
@@ -115,22 +114,37 @@ double integral(double (*f)(double), double a, double b, double eps2) {
     return i_2n;
 }
 
-
-double f4(double x) {
-    return x * x;
-}
-
 int main(int argc, char **argv) {
     //printf("%d : %lf\n", n, root_tangent(&f1, &df1, &f2, &df2, 1.0, 2.0, 0.0001)); 
     //printf("%d : %lf\n", n, root_chord(&f1, &f2, 1.0, 2.0, 0.0001));
 	//printf("integral = %lf\n", integral(&f4, 0.0, 4.0, 0.01));
+
+	double f1f2, f2f3, f1f3;
+
+	double eps1 = 0.001;
     
 	if (KEY == 't') {
-		printf("using tangent method\n");
+		printf("[*] Using tangent method\n");
+		f1f2 = root_tangent(&f1, &df1, &f2, &df2, a, b, eps1);
+		f1f3 = root_tangent(&f1, &df1, &f3, &df3, a, b, eps1);
+		f2f3 = root_tangent(&f2, &df2, &f3, &df3, a, b, eps1);
+
+		printf("[+] F1 and F2 point of intersection: %lf\n", f1f2);
+		printf("[+] F1 and F3 point of intersection: %lf\n", f1f3);
+		printf("[+] F2 and F3 point of intersection: %lf\n", f1f3);
 	} else if (KEY == 'c') {
-		printf("using chord method\n");
+		printf("[*] Using chord method\n");
+		f1f2 = root_chord(&f1, &f2, a, b, eps1);
+		f1f3 = root_chord(&f1, &f3, a, b, eps1);
+		f2f3 = root_chord(&f2, &f3, a, b, eps1);
+
+		printf("[+] F1 and F2 point of intersection: %lf\n", f1f2);
+		printf("[+] F1 and F3 point of intersection: %lf\n", f1f3);
+		printf("[+] F2 and F3 point of intersection: %lf\n", f2f3);
 	} else {
-		printf("[-]KEY not recognized %c", KEY);
+		printf("[-] KEY not recognized %c\n", KEY);
+		return 1;
 	}
+
 	return 0;
 }
