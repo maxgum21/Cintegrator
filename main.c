@@ -1,9 +1,16 @@
+#ifndef KEY
+#define KEY 'c'
+#endif
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include "functions.h"
 
 int n = 0;          // n - iteration counter
+
+extern double a, b;
 
 double root_chord(double (*f)(double), double (*g)(double), double a, double b, double eps1) {
 	/*
@@ -118,5 +125,12 @@ int main(int argc, char **argv) {
     //printf("%d : %lf\n", n, root_chord(&f1, &f2, 1.0, 2.0, 0.0001));
 	//printf("integral = %lf\n", integral(&f4, 0.0, 4.0, 0.01));
     
+	if (KEY == 't') {
+		printf("using tangent method\n");
+	} else if (KEY == 'c') {
+		printf("using chord method\n");
+	} else {
+		printf("[-]KEY not recognized %c", KEY);
+	}
 	return 0;
 }

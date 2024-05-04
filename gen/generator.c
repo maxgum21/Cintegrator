@@ -1,11 +1,12 @@
+#define _GNU_SOURCE 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "heap.h"
 #include "stack.h"
 
-struct stringHeap *text_heap;
-struct heap *data_heap;
+struct sheap *text_heap;
+struct dheap *data_heap;
 
 
 void push_command(const char str[], struct stack *stack) {
@@ -80,69 +81,69 @@ void tree_to_listing(struct node *node) {
         char *str;
         switch (node->type) {
                 case VAL:
-                        if ((j = search_heap(node->val, data_heap)) == -1) {
-                                push_heap(node->val, data_heap);
+                        if ((j = search_dheap(node->val, data_heap)) == -1) {
+                                push_dheap(node->val, data_heap);
                         }
                         j = (j == -1) ? data_heap->size : j;
                         asprintf(&str, "\n\tfld\tqword[const%d]\n", j);
-                        push_stringHeap(str, text_heap);                        
+                        push_sheap(str, text_heap);                        
                         break;
                 
                 case X:
                         asprintf(&str, "\n\tfld\tqword[ebp + 8]\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         break;
                 case PI:
                         asprintf(&str, "\n\tfldpi\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         break;
                 case E:
                         asprintf(&str, "\nfldl2e\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         asprintf(&str, "fld1\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         asprintf(&str, "fld\tst1\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         asprintf(&str, "fprem\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         asprintf(&str, "f2xm1\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         asprintf(&str, "faddp\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         asprintf(&str, "fscale\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         asprintf(&str, "fstp\tst1\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         break;
                 case ADD:
                         asprintf(&str, "\n\tfaddp\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         break;  
                 case SUB:
                         asprintf(&str, "\n\tfsubp\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         break;  
                 case MUL:
                         asprintf(&str, "\n\tfmulp\n");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         break;  
                 case DIV:
-                        asprintf(&str, "\n\tfdivp");
-                        push_stringHeap(str, text_heap);
+                        asprintf(&str, "\n\tfdivp\n");
+                        push_sheap(str, text_heap);
                         break;  
                 case SIN:
-                        asprintf(&str, "\n\tfsin");
-                        push_stringHeap(str, text_heap);
+                        asprintf(&str, "\n\tfsin\n");
+                        push_sheap(str, text_heap);
                         break;
                 case COS:
-                        asprintf(&str, "\n\tfcos");
-                        push_stringHeap(str, text_heap);
+                        asprintf(&str, "\n\tfcos\n");
+                        push_sheap(str, text_heap);
                         break;
                 case TAN:
-                        asprintf(&str, "\n\tfptan");
-                        push_stringHeap(str, text_heap);
+                        asprintf(&str, "\n\tfptan\n");
+                        push_sheap(str, text_heap);
                         asprintf(&str, "\n\tfstp\tst0");
-                        push_stringHeap(str, text_heap);
+                        push_sheap(str, text_heap);
                         break;
                 default:
                         printf("[-]Something went wrong while making listing from tree");
@@ -152,7 +153,7 @@ void tree_to_listing(struct node *node) {
 
 void print_text_section(FILE *file) {
         char *str;
-        while (str = pop_stringHeap(text_heap)) {
+        while (str = pop_sheap(text_heap)) {
                 fprintf(file, "%s", str);
         } 
 }
@@ -161,19 +162,19 @@ void print_data_section(FILE *file) {
         double val;
         int i = 0;
         while (data_heap->size) {
-                val = pop_heap(data_heap);
-                fprintf(file, "const%d:\tdq\t%lf\n", i, val);
+                val = pop_dheap(data_heap);
+                fprintf(file, "const%d:\tdq\t%lf\n", i + 1, val);
                 i++;
         }       
 }
 
-void create_listing(char *formula, size_t length, int index, FILE *output) {    
+void create_listing(char *formula, size_t length, int index) {    
 
         char *end, *str = calloc(20, 1);
         
         int byte_offset = 0, byte_read = 0;
         
-        struct stringHeap data_section = {NULL, 0, 0}, text_section = {NULL, 0, 0};
+        struct sheap data_section = {NULL, 0, 0}, text_section = {NULL, 0, 0};
         
         struct stack *stack = create_stack();
 
@@ -193,13 +194,13 @@ void create_listing(char *formula, size_t length, int index, FILE *output) {
         struct node *root = pop_stack(stack);
         
         char* temp;
-        asprintf(&temp, "f%d:\n\tpush\tebp\n\tmov\tebp, esp", index);
-        push_stringHeap(temp, text_heap);
+        asprintf(&temp, "f%d:\n\tpush\tebp\n\tmov\tebp, esp\n", index);
+        push_sheap(temp, text_heap);
 
         tree_to_listing(root);
 
-        asprintf(&temp, "\tleave\n\tret\n\n");
-        push_stringHeap(temp, text_heap);
+        asprintf(&temp, "\n\tleave\n\tret\n\n");
+        push_sheap(temp, text_heap);
 
         free_stack(stack);
         free(str);
@@ -223,16 +224,16 @@ int main(void) {
 
         printf("%lf %lf\n", a, b);      
         
-        text_heap = create_stringHeap();
-        data_heap = create_heap();
+        text_heap = create_sheap();
+        data_heap = create_dheap();
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 1; i <= 3; i++) {
                 size_t n = 0;
                 char *formula;
                 int c = getdelim(&formula, &n, '\n', input);
                 formula[c - 1] = 0; 
                 
-                create_listing(formula, n, 1, f1);
+                create_listing(formula, n, i);
                 free(formula);
         }
 
