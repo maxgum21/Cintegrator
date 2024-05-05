@@ -1,5 +1,13 @@
 #include <stdlib.h>
 
+/*
+	Basic implementations
+	of heap of strings
+	and heap of doubles
+
+	The code should speak for itself
+*/
+
 struct sheap {
 	char **arr;
 	size_t size, max_size;
@@ -28,6 +36,17 @@ void push_sheap(char *str, struct sheap *heap) {
 }
 
 char *pop_sheap(struct sheap *heap) {
+	
+	/*
+		Pop is executed in O(N)
+		but it's not critical
+		because N isn't as big
+		and keeping track of all objects
+		as a linked list would be
+		to complicated and require more memory
+		for a not very significant win
+	*/
+
 	if (!heap->size) return NULL;
 
 	char *temp = heap->arr[0];
@@ -78,7 +97,7 @@ double pop_dheap(struct dheap *heap) {
 	return temp;
 }
 
-int search_dheap(double key, struct dheap *heap) {
+int search_dheap(double key, struct dheap *heap) { 	// used to check if constant already exists on the heap
 	if (!heap->size) return -1;
 
 	for (int i = 0; i < heap->size; i++) {

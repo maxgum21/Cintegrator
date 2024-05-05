@@ -1,6 +1,6 @@
-#define _GNU_SOURCE 
+#define _GNU_SOURCE 	// need this to get asprintf function to manage heap strings
 
-#ifndef KEY
+#ifndef KEY				// default key is "c" which stands for chord method
 #define KEY = 'c'
 #endif
 
@@ -10,19 +10,24 @@
 #include "heap.h"
 #include "stack.h"
 
-struct sheap *text_heap;
-struct dheap *data_heap;
+struct sheap *text_heap; // string heap to keep track of section.text
+struct dheap *data_heap; // double heap to keep track of in-file constants in section.data
 
 
 void push_command(const char str[], struct stack *stack) {
+
+		/*
+			Builds a tree node by node
+			by pushing nodes onto stack
+		*/
 
         double d;
         char *end;
         
         struct node *node;
 
-        if ((d = strtod(str, &end)) || (str != end)) {
-                // Handle fpu number pushing
+        if ((d = strtod(str, &end)) || (str != end)) {	// from strtod output there's no way of knowing if it failed or read a 0.0
+                // Handle fpu number pushing			   that's why i use end to see if it read something or failed
                 node = create_node(d, VAL);
         } else if (strcmp(str, "sin") == 0) {
                 // Handle fpu sin function
@@ -63,12 +68,12 @@ void push_command(const char str[], struct stack *stack) {
                 }
         }
 
-        if (node->type & (ADD | SUB | MUL | DIV)) {
-                node->right = pop_stack(stack);
-                node->left      = pop_stack(stack);
-        } else if (node->type & (SIN | COS | TAN)) {
-                node->left      = pop_stack(stack); 
-        }
+        if (node->type & (ADD | SUB | MUL | DIV)) { 		// if the operation is binary,
+                node->right = pop_stack(stack);				// then put node of first operand
+                node->left      = pop_stack(stack);			// in the left child and second in the right
+        } else if (node->type & (SIN | COS | TAN)) {		
+                node->left      = pop_stack(stack); 		// if the operation is unary
+        }													// then put the operand in the left child node
 
         push_stack(node, stack);
 }
@@ -77,16 +82,24 @@ void tree_to_listing(struct node *node) {
         if (!node) return;
 
         char *str;
+
+		/*
+			This function recursively creates function code from the tree.
+			The functions aim is to never load more than 2 items on the
+			fpu stack at a time, thus every function takes all needed
+			arguments and leaves only the result instead of them.
+			This is done to prevent fpu stack overflow.
+		*/
         
         if (node->type & (ADD | SUB | MUL | DIV)) {
 				if (node->left->type & (VAL | PI | E | X)) {
-					tree_to_listing(node->right);   
-					tree_to_listing(node->left);    
-					asprintf(&str, "\n\tfxch\n");
-                    push_sheap(str, text_heap);
+					tree_to_listing(node->right);   // if in "A B OP" A is a constant,
+					tree_to_listing(node->left);    // B is a RPN module,
+					asprintf(&str, "\n\tfxch\n"); 	// then it gets B recursively first
+                    push_sheap(str, text_heap);		// before loading A to prevent FPU stack overflow
 				} else {
-					tree_to_listing(node->left);    
-					tree_to_listing(node->right);   
+					tree_to_listing(node->left);    // in "A B OP" finds A, then B
+					tree_to_listing(node->right);   // then does A OP B
 				}					
         } else if (node->type & (TAN | SIN | COS)) {
                 tree_to_listing(node->left);
@@ -94,9 +107,9 @@ void tree_to_listing(struct node *node) {
         int j;
         switch (node->type) {
                 case VAL:
-                        if ((j = search_dheap(node->val, data_heap)) == -1) {
-                                push_dheap(node->val, data_heap);
-                        }
+                        if ((j = search_dheap(node->val, data_heap)) == -1) { 	// check if this constant
+                                push_dheap(node->val, data_heap);				// already exist and
+                        }														// if it does use that constant
                         j = (j == -1) ? data_heap->size - 1 : j;
                         asprintf(&str, "\n\tfld\tqword[const%d]\n", j + 1);
                         push_sheap(str, text_heap);                        
@@ -110,9 +123,9 @@ void tree_to_listing(struct node *node) {
                         asprintf(&str, "\n\tfldpi\n");
                         push_sheap(str, text_heap);
                         break;
-                case E:
-                        asprintf(&str, "\nfldl2e\n");
-                        push_sheap(str, text_heap);
+                case E:	// too complex of an "e constant" loading implementation
+                        asprintf(&str, "\nfldl2e\n"); // basically does (
+                        push_sheap(str, text_heap);	  // 2^(log2(e)) - 1) + 1
                         asprintf(&str, "fld1\n");
                         push_sheap(str, text_heap);
                         asprintf(&str, "fld\tst1\n");
@@ -127,7 +140,7 @@ void tree_to_listing(struct node *node) {
                         push_sheap(str, text_heap);
                         asprintf(&str, "fstp\tst1\n");
                         push_sheap(str, text_heap);
-                        break;
+                        break; 						// FPU designers, was it too hard to create an operation for this?
                 case ADD:
                         asprintf(&str, "\n\tfaddp\n");
                         push_sheap(str, text_heap);
@@ -153,8 +166,8 @@ void tree_to_listing(struct node *node) {
                         push_sheap(str, text_heap);
                         break;
                 case TAN:
-                        asprintf(&str, "\n\tfptan\n");
-                        push_sheap(str, text_heap);
+                        asprintf(&str, "\n\tfptan\n");	// fptan returns 2 numbers on stack
+                        push_sheap(str, text_heap);		// pop from stack to only return a single result
                         asprintf(&str, "\n\tfstp\tst0");
                         push_sheap(str, text_heap);
                         break;
@@ -182,7 +195,11 @@ void print_data_section(FILE *file) {
 }
 
 void create_listing(char *formula, const char *func_name, int index) {    
-
+		/*
+			Creates a listing for a function
+			from a string where a formula for the function
+			is written in Reverse Polish Notation
+		*/
         char *end, *str = calloc(20, 1);
         
         int byte_offset = 0, byte_read = 0;
@@ -194,7 +211,7 @@ void create_listing(char *formula, const char *func_name, int index) {
         while (
                         *(formula + byte_offset) != '\n' &&
                         *(formula + byte_offset) &&
-                        sscanf(formula + byte_offset, "%s%n", str, &byte_read)) {
+                        sscanf(formula + byte_offset, "%s%n", str, &byte_read)) {	// reading the string iteratively
                 
                 push_command(str, stack);
 

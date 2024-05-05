@@ -12,14 +12,15 @@ unsigned n = 0;          // n - iteration counter
 
 double root_chord(double (*f)(double), double (*g)(double), double a, double b, double eps1) {
 	/*
+	Calculating f and g intersection with the chord method
 	y = (f(a) - f(b))/(a - b) * (x - a) + f(a)
 	y = 0
 	x = (a - b) * (-f(a)) / (f(a) - f(b)) + a
 	*/
 	n = 0;
 	
-	double deriv = ((*f)(b) - (*g)(b) - (*f)(a) + (*g)(a));
-	double convex = (((*f)(a) - (*g)(a) + (*f)(b) - (*g)(b)) / 2) - ((*f)((a + b) / 2) - (*g)((a + b) / 2)); 
+	double deriv = ((*f)(b) - (*g)(b) - (*f)(a) + (*g)(a));	// calculating derivative sign
+	double convex = (((*f)(a) - (*g)(a) + (*f)(b) - (*g)(b)) / 2) - ((*f)((a + b) / 2) - (*g)((a + b) / 2)); // calculating second-order derivative sign
 	double c;
 	if (deriv * convex < 0.0) {
 		c = b;
@@ -44,6 +45,7 @@ double root_chord(double (*f)(double), double (*g)(double), double a, double b, 
 }
 
 double root_tangent(double (*f)(double), double (*df)(double), double (*g)(double), double (*dg)(double), double a, double b, double eps1) {
+	// Calculating f and g intersection with the tangent method
     n = 0;
     double deriv = ((*f)(a) - (*g)(a)) * ((*f)(b) - (*g)(b));
     double convex = (((*f)(a) - (*g)(a)) - ((*f)(b) - (*g)(b))) / 2 - (((*f)((a + b) / 2) - (*g)((a + b) / 2)));
@@ -82,11 +84,11 @@ double integral(double (*f)(double), double a, double b, double eps2) {
     n = 0;
     double i_n = 0;
     double i_2n = 0;
-    double radius = (b - a) / 4.0;
+    double radius = (b - a) / 4.0;					// radius is the legnth from one partition point to the next
     int m = 2;
 
-    double *arr_old = malloc(sizeof(double) * 3);
-    double *arr_new = malloc(sizeof(double) * 5);
+    double *arr_old = malloc(sizeof(double) * 3);	// array to store current points of interval partition
+    double *arr_new = malloc(sizeof(double) * 5);	// array to store next points of partition
 
     arr_old[0] = (*f)(a);
     arr_old[1] = (*f)(a + 2 * radius);
@@ -131,8 +133,8 @@ int comp(const void *op1, const void *op2) {
 	return (a > b) ? 1 : (a < b) ? -1 : 0; 
 }
 
-int is_equal(double a, double b, double eps) {
-	return fabs(a - b) < 2 * eps;
+int is_equal(double a, double b, double eps) {	// needed this function, because listing functions 
+	return fabs(a - b) < 2 * eps;				// calculate different numbers even if they intersect in the point
 }
 
 int main(int argc, char **argv) {
@@ -168,14 +170,17 @@ int main(int argc, char **argv) {
 				"and specify a file to take the function file.\n\n"
 				"Function file format:\n"
 				"\t<A> <B>\n\t<f1>\n\t<f2>\n\t<f3>\n\t[df1]\n\t[df2]\n\t[df3]\n\n"
-				"Where A and B are interval limits of intersection and integral calculation;\n"
+				"Where A and B are interval limits of intersection and integral calculation\n"
 				"<f*> is a function represented in Reverse Polish Notation\n"
-				"[df*] is a derivative of the f* function written in RPN\n"
+				"[df*] is a derivative of the f* function written in Reverse Polish Notation\n"
 				"(derivatives are only necessary when using the TANGENTIAL method of intersection calculation)\n\n"
 				"Options:\n"
-				"\t\t-help\t-h\tPrint this help message\n"
-				"\t\t-i\t\tPrint points of intersection of functions\n"
-				"\t\t-n\t\tPrint amount of iterations needed to calculate intersections and areas\n\n"
+				"\t\t-help\t-h\t\t\tPrint this help message\n"
+				"\t\t-i\t\t\t\tPrint points of intersection of functions\n"
+				"\t\t-n\t\t\t\tPrint amount of iterations needed to calculate intersections and areas\n"
+				"\t\t-intersection-accuracy=<eps>\tUse eps as calculation error for intersection calculation\n"
+				"\t\t\t\t\t\tgeneraly use a negative power of ten (eps = 0.001 by default)\n"
+				"\t\t-area-accuracy=<eps>\t\tUse eps for as calculation error for area calculation (eps = 0.001 by default)\n\n"
 				"MAKE Options:\n\t\t\"key\" =\n"
 				"\t\t\t\'t\'\tUse the TANGENTIAL method of calculating intersections (Must add derivatives to function file)\n"
 				"\t\t\t\'c\'\tUse the CHORD method of claculating intersections (Derivatives are unnecessary)\n\n");
@@ -221,7 +226,7 @@ int main(int argc, char **argv) {
 
 	double area = 0;
 
-	if (is_equal(f1(roots[0]), f2(roots[0]), eps1)) {
+	if (is_equal(f1(roots[0]), f2(roots[0]), eps1)) {	// calculating area by conditionally getting the order of integrals
 		area += ((f1(roots[1]) > f2(roots[1])) ? 1 : -1) * (integral(&f1, roots[0], roots[1], eps2) - integral(&f2, roots[0], roots[1], eps2));
 
 		if (is_equal(f1(roots[2]), f3(roots[2]), eps1)) {
