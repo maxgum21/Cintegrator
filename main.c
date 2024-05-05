@@ -5,10 +5,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include "functions.h"
 
-int n = 0;          // n - iteration counter
-
+unsigned n = 0;          // n - iteration counter
 
 double root_chord(double (*f)(double), double (*g)(double), double a, double b, double eps1) {
 	/*
@@ -23,13 +23,19 @@ double root_chord(double (*f)(double), double (*g)(double), double a, double b, 
 	double c;
 	if (deriv * convex < 0.0) {
 		c = b;
-		while (((*f)(c) - (*g)(c)) * ((*f)(c - eps1) - (*g)(c - eps1)) >= 0.0) {
+		while (
+				((*f)(c) - (*g)(c)) * ((*f)(c - eps1) - (*g)(c - eps1)) > 0.0 &&
+				((*f)(c) - (*g)(c)) * ((*f)(c + eps1) - (*g)(c + eps1)) > 0.0
+				) {
 			n++;
 			c = (a - c) * ((*g)(a) - (*f)(a)) / ((*f)(a) - (*g)(a) - (*f)(c) + (*g)(c)) + a;
 		}
 	} else {
 		c = a;
-		while (((*f)(c) - (*g)(c)) * ((*f)(c + eps1) - (*g)(c + eps1)) >= 0.0) {
+		while (
+				((*f)(c) - (*g)(c)) * ((*f)(c + eps1) - (*g)(c + eps1)) > 0.0 &&
+				((*f)(c) - (*g)(c)) * ((*f)(c - eps1) - (*g)(c - eps1)) > 0.0
+				) {
 			n++;
 			c = (b - c) * ((*g)(b) - (*f)(b)) / ((*f)(b) - (*g)(b) - (*f)(c) + (*g)(c)) + b;
 		}
@@ -46,7 +52,10 @@ double root_tangent(double (*f)(double), double (*df)(double), double (*g)(doubl
     if (deriv * convex > 0.0) {
         c = b;
 
-        while (((*f)(c) - (*g)(c)) * ((*f)(c - eps1) - (*g)(c - eps1)) > 0) { 
+        while (
+				((*f)(c) - (*g)(c)) * ((*f)(c - eps1) - (*g)(c - eps1)) > 0 &&
+				((*f)(c) - (*g)(c)) * ((*f)(c + eps1) - (*g)(c + eps1)) > 0
+				) { 
             n++;
 
             c -= ((*f)(c) - (*g)(c)) / ((*df)(c) - (*dg)(c));
@@ -56,7 +65,10 @@ double root_tangent(double (*f)(double), double (*df)(double), double (*g)(doubl
     } else {
         c = a;
 
-        while (((*f)(c) - (*g)(c)) * ((*f)(c + eps1) - (*g)(c + eps1)) > 0) { 
+        while (
+				((*f)(c) - (*g)(c)) * ((*f)(c + eps1) - (*g)(c + eps1)) > 0 &&
+				((*f)(c) - (*g)(c)) * ((*f)(c - eps1) - (*g)(c - eps1)) > 0
+				) { 
             n++;
             c -= ((*f)(c) - (*g)(c)) / ((*df)(c) - (*dg)(c));
 
@@ -124,44 +136,88 @@ int is_equal(double a, double b, double eps) {
 }
 
 int main(int argc, char **argv) {
-    //printf("%d : %lf\n", n, root_tangent(&f1, &df1, &f2, &df2, 1.0, 2.0, 0.0001)); 
-    //printf("%d : %lf\n", n, root_chord(&f1, &f2, 1.0, 2.0, 0.0001));
-	//printf("integral = %lf\n", integral(&f4, 0.0, 4.0, 0.01));
 
-	double f1f2, f2f3, f1f3;
+	int b_write_int = 0, b_write_iter = 0, b_write_help = 0;
 
 	double eps1 = 0.001, eps2 = 0.001;
+
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "-help") || !strcmp(argv[i], "-h")) {
+			b_write_help = 1;
+		} else if (!strcmp(argv[i], "-i")) {
+			b_write_int  = 1;
+		} else if (!strcmp(argv[i], "-n")) {
+			b_write_iter = 1;
+		} else if (!strncmp(argv[i], "-intersection-accuracy=", 23)) {
+	   		sscanf(argv[i], "-intersection-accuracy=%lf", &eps1);
+		} else if (!strncmp(argv[i], "-area-accuracy=", 14)) {
+	   		sscanf(argv[i], "-area-accuracy=%lf", &eps2);
+		} else {
+			printf("[-] Flag \"%s\" not recognized\n", argv[i]);
+			return 1;
+		}
+	}
+
+	double f12, f23, f13;
+
+	unsigned n12 = 0, n23 = 0, n13 = 0;
     
+	if (b_write_help) {
+		printf( "Usage:\n\tcintegrator [ options ]\n\n"
+				"When compiling the project make sure to add an environment variable called SPEC_FILE\n"
+				"and specify a file to take the function file.\n\n"
+				"Function file format:\n"
+				"\t<A> <B>\n\t<f1>\n\t<f2>\n\t<f3>\n\t[df1]\n\t[df2]\n\t[df3]\n\n"
+				"Where A and B are interval limits of intersection and integral calculation;\n"
+				"<f*> is a function represented in Reverse Polish Notation\n"
+				"[df*] is a derivative of the f* function written in RPN\n"
+				"(derivatives are only necessary when using the TANGENTIAL method of intersection calculation)\n\n"
+				"Options:\n"
+				"\t\t-help\t-h\tPrint this help message\n"
+				"\t\t-i\t\tPrint points of intersection of functions\n"
+				"\t\t-n\t\tPrint amount of iterations needed to calculate intersections and areas\n\n"
+				"MAKE Options:\n\t\t\"key\" =\n"
+				"\t\t\t\'t\'\tUse the TANGENTIAL method of calculating intersections (Must add derivatives to function file)\n"
+				"\t\t\t\'c\'\tUse the CHORD method of claculating intersections (Derivatives are unnecessary)\n\n");
+		return 0;
+	}
+
 	if (KEY == 't') {
 		printf("[*] Using tangent method\n");
-		f1f2 = root_tangent(&f1, &df1, &f2, &df2, a, b, eps1);
-		f1f3 = root_tangent(&f1, &df1, &f3, &df3, a, b, eps1);
-		f2f3 = root_tangent(&f2, &df2, &f3, &df3, a, b, eps1);
-
-		printf("[+] F1 and F2 point of intersection: %lf\n", f1f2);
-		printf("[+] F1 and F3 point of intersection: %lf\n", f1f3);
-		printf("[+] F2 and F3 point of intersection: %lf\n", f1f3);
+		f12 = root_tangent(&f1, &df1, &f2, &df2, a, b, eps1);
+	   	n12 = n;
+		f13 = root_tangent(&f1, &df1, &f3, &df3, a, b, eps1);
+	   	n13 = n;
+		f23 = root_tangent(&f2, &df2, &f3, &df3, a, b, eps1);
+	   	n23 = n;
 	} else if (KEY == 'c') {
 		printf("[*] Using chord method\n");
-		f1f2 = root_chord(&f1, &f2, a, b, eps1);
-		f1f3 = root_chord(&f1, &f3, a, b, eps1);
-		f2f3 = root_chord(&f2, &f3, a, b, eps1);
-
-		printf("[+] F1 and F2 point of intersection: %lf\n", f1f2);
-		printf("[+] F1 and F3 point of intersection: %lf\n", f1f3);
-		printf("[+] F2 and F3 point of intersection: %lf\n", f2f3);
+		f12 = root_chord(&f1, &f2, a, b, eps1);
+	   	n12 = n;
+		f13 = root_chord(&f1, &f3, a, b, eps1);
+	   	n13 = n;
+		f23 = root_chord(&f2, &f3, a, b, eps1);
+	   	n23 = n;
 	} else {
-		printf("[-] KEY not recognized %c\n", KEY);
+		printf("[-] KEY \"%c\" not recognized\n", KEY);
 		return 1;
 	}
 
-	double (*farr[3])(double) = {f1, f2, f3};
-	
-	double roots[3] = {f1f2, f1f3, f2f3};
+	if (b_write_int) {
+		printf("[+] F1 and F2 point of intersection: %lf\n", f12);
+		printf("[+] F1 and F3 point of intersection: %lf\n", f13);
+		printf("[+] F2 and F3 point of intersection: %lf\n\n", f23);
+	}
+
+	if (b_write_iter) {
+		printf("[+] F1 and F2 intersection calculation took: %u iterations\n", n12);
+		printf("[+] F1 and F3 intersection calculation took: %u iterations\n", n13);
+		printf("[+] F2 and F3 intersection calculation took: %u iterations\n\n", n23);
+	}
+
+	double roots[3] = {f12, f13, f23};
 
 	qsort(roots, 3, sizeof(double), &comp);
-
-	printf("%lf, %lf, %lf\n", roots[0], roots[1], roots[2]);
 
 	double area = 0;
 
@@ -191,6 +247,7 @@ int main(int argc, char **argv) {
 		}
 	} 
 
-	printf("%lf\n", area);
+	printf("[+] Area: %lf\n", area);
+
 	return 0;
 }

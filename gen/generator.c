@@ -75,22 +75,30 @@ void push_command(const char str[], struct stack *stack) {
 
 void tree_to_listing(struct node *node) {
         if (!node) return;
+
+        char *str;
         
         if (node->type & (ADD | SUB | MUL | DIV)) {
-                tree_to_listing(node->left);    
-                tree_to_listing(node->right);   
+				if (node->left->type & (VAL | PI | E | X)) {
+					tree_to_listing(node->right);   
+					tree_to_listing(node->left);    
+					asprintf(&str, "\n\tfxch\n");
+                    push_sheap(str, text_heap);
+				} else {
+					tree_to_listing(node->left);    
+					tree_to_listing(node->right);   
+				}					
         } else if (node->type & (TAN | SIN | COS)) {
                 tree_to_listing(node->left);
         }
         int j;
-        char *str;
         switch (node->type) {
                 case VAL:
                         if ((j = search_dheap(node->val, data_heap)) == -1) {
                                 push_dheap(node->val, data_heap);
                         }
-                        j = (j == -1) ? data_heap->size : j;
-                        asprintf(&str, "\n\tfld\tqword[const%d]\n", j);
+                        j = (j == -1) ? data_heap->size - 1 : j;
+                        asprintf(&str, "\n\tfld\tqword[const%d]\n", j + 1);
                         push_sheap(str, text_heap);                        
                         break;
                 
