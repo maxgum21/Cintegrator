@@ -14,7 +14,7 @@ struct sheap *text_heap; // string heap to keep track of section.text
 struct dheap *data_heap; // double heap to keep track of in-file constants in section.data
 
 
-void push_command(const char str[], struct stack *stack) {
+int push_command(const char str[], struct stack *stack) {
 
 		/*
 			Builds a tree node by node
@@ -63,8 +63,8 @@ void push_command(const char str[], struct stack *stack) {
                                 node = create_node(0.0, X);
                                 break;
                         default:
-                                //printf("[-] Something went wrong while making tree from formula line");
-                                return;
+                                printf("[-] Something went wrong while making tree from formula line\n");
+                                return 1;
                 }
         }
 
@@ -76,10 +76,11 @@ void push_command(const char str[], struct stack *stack) {
         }													// then put the operand in the left child node
 
         push_stack(node, stack);
+		return 0;
 }
 
-void tree_to_listing(struct node *node) {
-        if (!node) return;
+int tree_to_listing(struct node *node) {
+        if (!node) return 0;
 
         char *str;
 
@@ -172,9 +173,11 @@ void tree_to_listing(struct node *node) {
                         push_sheap(str, text_heap);
                         break;
                 default:
-                        //printf("[-] Something went wrong while making listing from tree");
-                        break;
+                        printf("[-] Something went wrong while making listing from tree\n");
+                        return 1;
         }
+
+		return 0;
 }
 
 void print_text_section(FILE *file) {
@@ -189,12 +192,12 @@ void print_data_section(FILE *file) {
         int i = 0;
         while (data_heap->size) {
                 val = pop_dheap(data_heap);
-                fprintf(file, "const%d:\tdq\t%lf\n", i + 1, val);
+                fprintf(file, "const%d:\t\tdq\t%lf\n", i + 1, val);
                 i++;
         }       
 }
 
-void create_listing(char *formula, const char *func_name, int index) {    
+int create_listing(char *formula, const char *func_name, int index) {    
 		/*
 			Creates a listing for a function
 			from a string where a formula for the function
@@ -213,7 +216,10 @@ void create_listing(char *formula, const char *func_name, int index) {
                         *(formula + byte_offset) &&
                         sscanf(formula + byte_offset, "%s%n", str, &byte_read)) {	// reading the string iteratively
                 
-                push_command(str, stack);
+                if (push_command(str, stack)) {
+					printf("[-] Something went wrong when creating a tree from file formula:\n\t\t\"%s\"\n", formula);
+					return 1;
+				}
 
                 byte_offset += byte_read;
         }
@@ -225,13 +231,18 @@ void create_listing(char *formula, const char *func_name, int index) {
         asprintf(&temp, "%s%d:\n\tpush\tebp\n\tmov\tebp, esp\n", func_name, index);
         push_sheap(temp, text_heap);
 
-        tree_to_listing(root);
+        if (tree_to_listing(root)) {
+			printf("[-] Something went wrong when generating listing from tree: \"%s%d\"", func_name, index);
+			return 1;
+		}
 
         asprintf(&temp, "\n\tleave\n\tret\n\n");
         push_sheap(temp, text_heap);
 
         free_stack(stack);
         free(str);
+
+		return 0;
 }
 
 int main(void) {
@@ -240,7 +251,7 @@ int main(void) {
 
         if (!spec_file) {
                 printf("[-] SPEC_FILE not assigned\n");
-				printf("[-] Listing generation failed\n");
+				printf("[-] Listing generation failed!\n");
                 return 1;
         }
 
@@ -248,42 +259,75 @@ int main(void) {
         FILE *output = fopen("functions.asm", "w");
 
         double a, b;
+		int num;
         
-        fscanf(input, "%lf %lf\n", &a, &b);
-
+        fscanf(input, "%d %lf %lf\n", &num, &a, &b);
         
         text_heap = create_sheap();
         data_heap = create_dheap();
 
 		if (KEY == 't') printf("[*] Generating listing for tangent method...\n");
 		else if (KEY == 'c') printf("[*] Generating listing for chord method...\n");
-		else { printf("[-] KEY undefined!\n"); printf("[-] Listing generation failed\n"); return 1; }
+		else { printf("[-] KEY undefined!\n"); printf("[-] Listing generation failed!\n"); return 1; }
 
-        for (int i = 1; i <= ((KEY == 't') ? 6 : 3); i++) {
+        for (int i = 1; i <= ((KEY == 't') ? 2 * num : num); i++) {
                 size_t n = 0;
                 char *formula;
                 int c = getdelim(&formula, &n, '\n', input);
                 formula[c - 1] = 0; 
+
+				if (!c) {
+					printf("[-] Formula string is empty!\n");
+					printf("[-] Listing generation failed!\n");
+					return 1;
+				}
                 
-				if (i > 3) create_listing(formula, "df", i - 3);
-				else create_listing(formula, "f", i);
+				if (i > num) {
+					if (create_listing(formula, "df", i - num)) {
+						printf("[-] Something went wrong when creating listing for \"df%d\"\n", i - num);
+						printf("[-] Listing generation failed!\n");
+						return 1;
+					}
+				} else {
+					if (create_listing(formula, "f", i)) {
+						printf("[-] Something went wrong when creating listing for \"f%d\"\n", i);
+						printf("[-] Listing generation failed!\n");
+						return 1;
+					}
+				}
                 
 				free(formula);
         }
 
         fprintf(output, "section .data\n");
-		fprintf(output, "a:\tdq\t%lf\n", a);
-		fprintf(output, "b:\tdq\t%lf\n", b);
+		fprintf(output, "a:\t\tdq\t%lf\n", a);
+		fprintf(output, "b:\t\tdq\t%lf\n", b);
+		fprintf(output, "num:\t\tdd\t%d\n", num);
+		fprintf(output, "func_arr:\tdd\t");
+		for (int i = 1; i <= num; i++) {
+			if (i == num && KEY != 't')	fprintf(output, "f%d\n", i);
+			else 						fprintf(output, "f%d, ", i);
+		}
+		
+		if (KEY == 't') {
+			for (int i = 1; i <= num; i++) {
+				if (i == num)	fprintf(output, "df%d\n", i);
+				else 			fprintf(output, "df%d, ", i);
+			}
+		}
+
         print_data_section(output);
 
         fprintf(output, "\nsection .text\n");
-		fprintf(output, "\nglobal a\nglobal b\n");
-
+		fprintf(output, "\nglobal a\nglobal b\nglobal num\nglobal func_arr\n");
+		
+		/*
 		for (int i = 1; i <= 3; i++) fprintf(output, "global f%d\n", i);
         
 		if (KEY == 't') {
         	for (int i = 1; i <= 3; i++) fprintf(output, "global df%d\n", i);
 		}
+		*/
 
 		print_text_section(output);
 

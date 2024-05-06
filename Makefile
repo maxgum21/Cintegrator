@@ -11,9 +11,9 @@ cflags = -g
 clean:
 	@rm -f *.o generator functions.asm
 
-prog: functions main
+prog: functions calculation main
 	@echo "[*] Linking main program..."
-	@gcc -o cintegrator main.o functions.o -m32 -no-pie
+	@gcc -o cintegrator main.o functions.o calculation.o -m32 -no-pie
 	@echo "[+] Linking complete!\n"
 
 main:
@@ -21,8 +21,13 @@ main:
 	@gcc -o main.o main.c -c -m32 $(def_keys) $(cflags) || { echo "[-] Compilation of main program failed!"; exit 1; }
 	@echo "[+] Compilation complete!\n"
 
+calculation:
+	@echo "[*] Compiling calculation program..."
+	@gcc -o calculation.o calculation.c -c -m32 $(cflags) || { echo "[-] Compilation of calculation program failed!"; exit 1; }
+	@echo "[+] Compilation complete!\n"
+
 functions: generate
-	@echo "[*] Compling function listing..."
+	@echo "[*] Compiling function listing..."
 	@nasm -f elf32  -o functions.o functions.asm || { echo "[-] Compilation of function listing failed!"; exit 1; }
 	@echo "[+] Compilation complete!\n"
 
