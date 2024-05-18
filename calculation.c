@@ -69,7 +69,7 @@ double root_tangent(double (*f)(double), double (*df)(double), double (*g)(doubl
 			if (((*f)(c) - (*g)(c)) * ((*f)(c + eps1) - (*g)(c + eps1)) <= 0.0) return c + eps1;
             n++;
 
-            c -= ((*f)(c) - (*g)(c)) / ((*df)(c) - (*dg)(c));
+            c += ((*f)(c) - (*g)(c)) / ((*df)(c) - (*dg)(c));
         }
         
         return c;
@@ -81,7 +81,7 @@ double root_tangent(double (*f)(double), double (*df)(double), double (*g)(doubl
 				) { 
 			if (((*f)(c) - (*g)(c)) * ((*f)(c - eps1) - (*g)(c - eps1)) <= 0.0) return c - eps1;
             n++;
-            c -= ((*f)(c) - (*g)(c)) / ((*df)(c) - (*dg)(c));
+            c += ((*f)(c) - (*g)(c)) / ((*df)(c) - (*dg)(c));
 
         }
         

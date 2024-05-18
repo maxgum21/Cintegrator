@@ -1,7 +1,7 @@
 #!/bin/bash
 
 let mode=0;
-
+echo "$1 $2 $3"
 while read -r line; do
 	
 	if [ "$line" = "area:" ]
@@ -13,9 +13,9 @@ while read -r line; do
 	else 
 		if [ "$mode" -eq "1" ]
 		then
-			./cintegrator -ti $line
+			./cintegrator $2 $3 -ti $line
 		else
-			./cintegrator -t $line
+			./cintegrator $2 $3 -t $line
 		fi
 	fi
 done < "$1"
