@@ -1,5 +1,6 @@
 #!/bin/bash
 
+prog=$1
 let mode=0;
 echo "$1 $2 $3"
 while read -r line; do
@@ -13,10 +14,10 @@ while read -r line; do
 	else 
 		if [ "$mode" -eq "1" ]
 		then
-			./cintegrator $2 $3 -ti $line
+			./$prog $3 $4 -ti $line
 		else
-			./cintegrator $2 $3 -t $line
+			./$prog $3 $4 -t $line
 		fi
 	fi
-done < "$1"
+done < "$2"
 

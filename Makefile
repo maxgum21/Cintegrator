@@ -20,7 +20,7 @@ clean:
 
 test: $(TEST_FILE)
 	@echo "[*] Testing..."
-	@$(SOURCE_DIR)/test.sh $(TEST_FILE)
+	@$(SOURCE_DIR)/test.sh $(TARGET) $(TEST_FILE)
 	@echo "[+] Testing complete!"
 
 $(BUILD_DIR):

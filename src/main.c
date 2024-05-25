@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 		if (b_write_iter) printf("[+] Calculated in %u iterations\n", n);
 
 		if (is_equal(ipoint, int_test_val, eps1)) {
-			printf("[+] OK!\n");
+			printf("[+] OK! (Expected val: %lf, Result val: %lf)\n", int_test_val, ipoint);
 			return 0;	
 		} else {
 			printf("[-] ERR :\n\t\tExpected value:\t%lf\n\t\tResult value:\t%lf\n", int_test_val, ipoint);
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
 		if (b_write_iter) printf("[+] Calculated in %u iterations\n", n);
 
 		if (is_equal(area, area_test_val, eps2)) {
-			printf("[+] OK!\n");
+			printf("[+] OK!(Expected val: %lf, Result val: %lf)\n", area_test_val, area);
 			return 0;	
 		} else {
 			printf("[-] ERR :\n\t\tExpected value:\t%lf\n\t\tResult value:\t%lf\n", area_test_val, area);
@@ -177,17 +177,11 @@ int main(int argc, char **argv) {
 
 	if (KEY == 't') {
 		printf("[*] Using tangent method\n");
-        printf("calculating f12: ");
 		f12 = root_tangent(func_arr[0], func_arr[0 + num], func_arr[1], func_arr[1 + num], a, b, eps1);
-        printf("%lf\n", f12);
 	   	n12 = n;
-        printf("calculating f13: ");
 		f13 = root_tangent(func_arr[0], func_arr[0 + num], func_arr[2], func_arr[2 + num], a, b, eps1);
-        printf("%lf\n", f13);
 	   	n13 = n;
-        printf("calculating f23: ");
 		f23 = root_tangent(func_arr[1], func_arr[1 + num], func_arr[2], func_arr[2 + num], a, b, eps1);
-        printf("%lf\n", f23);
 	   	n23 = n;
 	} else if (KEY == 'c') {
 		printf("[*] Using chord method\n");
