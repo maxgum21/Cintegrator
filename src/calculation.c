@@ -1,56 +1,32 @@
-#include <stdlib.h>
 #include <math.h>
 
 unsigned n = 0;          // n - iteration counter
 
 double integral(double (*f)(double), double a, double b, double eps2) {
-    n = 0;
-    double i_n = 0;
-    double i_2n = 0;
-    double radius = (b - a) / 4.0;					// radius is the legnth from one partition point to the next
-    int m = 2;
+    n = 1;
+    int m = 10;         // initial partition including A and B
+    double radius = (b - a) / (m - 1);
+    double sum = (*f)(a) + (*f)(b), integral = 0;
 
-    double *arr_old = malloc(sizeof(double) * 3);	// array to store current points of interval partition
-    double *arr_new = malloc(sizeof(double) * 5);	// array to store next points of partition
+    for (int i = 1; i < m - 1; i++) {
+        double xi = a + i * radius;
+        sum += 2 * (*f)(xi);            // calculate initial sum of values
+    }
 
-    arr_old[0] = (*f)(a);
-    arr_old[1] = (*f)(a + 2 * radius);
-    arr_old[2] = (*f)(b);
-
-    double c;
     do {
         n++;
-        i_n = i_2n;
-        i_2n = 0;
-        c = a;
-
-        arr_new[0] = arr_old[0];
-        arr_new[2 * m] = arr_old[m];
-
-        for (int i = 0; i < 2 * m; i++, c += radius) {
-            if (i % 2 == 0) {
-                arr_new[i] = arr_old[i / 2];
-                arr_new[i + 1] = (*f)(c + radius);
-            } else {
-                arr_new[i + 1] = arr_old[(i + 1) / 2];
-            }
-
-            i_2n += radius * (arr_new[i] + arr_new[i + 1]) / 2.0;
+        integral = sum * radius / 2;
+        for (int i = 1; i < m; i++) {
+            double xi = a + radius * i - radius / 2.0;
+            sum += 2 * (*f)(xi);
         }
 
-        m <<= 1;
-        radius /= 2.0;        
+        radius /= 2.0;
 
-        free(arr_old);
-        arr_old = arr_new;
-        arr_new = malloc(sizeof(double) * (2 * m + 1));
+        m += m - 1;
+    } while (fabs(integral - sum * radius / 2) >= eps2);
 
-    } while (fabs(i_n - i_2n) >= eps2);
-
-	free(arr_old);
-	free(arr_new);
-
-    return i_2n;
+    return sum * radius / 2;    
 }
 
 double root_tangent(double (*f)(double), double (*df)(double), double (*g)(double), double (*dg)(double), double a, double b, double eps1) {
